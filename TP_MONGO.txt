@@ -1,0 +1,95 @@
+Windows PowerShell
+Copyright (C) Microsoft Corporation. Tous droits réservés.
+
+Installez la dernière version de PowerShell pour de nouvelles fonctionnalités et améliorations ! https://aka.ms/PSWindows
+
+PS C:\Users\LAPTA> & "C:\MongoDB\bin\mongosh.exe"
+Current Mongosh Log ID: 69eb3a201c4b5584c83682d0
+Connecting to:          mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.8.2
+Using MongoDB:          7.0.31
+Using Mongosh:          2.8.2
+
+For mongosh info see: https://www.mongodb.com/docs/mongodb-shell/
+
+
+To help improve our products, anonymous usage data is collected and sent to MongoDB periodically (https://www.mongodb.com/legal/privacy-policy).
+You can opt-out by running the disableTelemetry() command.
+
+------
+   The server generated these startup warnings when booting
+   2026-04-24T10:17:05.638+01:00: Access control is not enabled for the database. Read and write access to data and configuration is unrestricted
+   2026-04-24T10:17:05.639+01:00: This server is bound to localhost. Remote systems will be unable to connect to this server. Start the server with --bind_ip <address> to specify which IP addresses it should serve responses from, or with --bind_ip_all to bind to all interfaces. If this behavior is desired, start the server with --bind_ip 127.0.0.1 to disable this warning
+------
+
+test> use info
+switched to db info
+info> db.produits.insertOne({nom: "Stylo", prix: 100})
+{
+  acknowledged: true,
+  insertedId: ObjectId('69eb3b5d1c4b5584c83682d1')
+}
+info> db.produits.find()
+[
+  { _id: ObjectId('69eb3b5d1c4b5584c83682d1'), nom: 'Stylo', prix: 100 }
+]
+info> db.produits.insertMany([
+|   {nom: "Cahier", prix: 250},
+|   {nom: "Livre", prix: 500},
+|   {nom: "Crayon", prix: 50}
+| ])
+{
+  acknowledged: true,
+  insertedIds: {
+    '0': ObjectId('69eb3bf01c4b5584c83682d2'),
+    '1': ObjectId('69eb3bf01c4b5584c83682d3'),
+    '2': ObjectId('69eb3bf01c4b5584c83682d4')
+  }
+}
+info> db.produits.find({nom: "Livre"})
+[
+  { _id: ObjectId('69eb3bf01c4b5584c83682d3'), nom: 'Livre', prix: 500 }
+]
+info> db.produits.updateOne(
+|   {nom: "Stylo"},
+|   {$set: {prix: 120}}
+| )
+{
+  acknowledged: true,
+  insertedId: null,
+  matchedCount: 1,
+  modifiedCount: 1,
+  upsertedCount: 0
+}
+info> db.produits.deleteOne({nom: "Crayon"})
+{ acknowledged: true, deletedCount: 1 }
+info> db.produits.find()
+[
+  { _id: ObjectId('69eb3b5d1c4b5584c83682d1'), nom: 'Stylo', prix: 120 },
+  { _id: ObjectId('69eb3bf01c4b5584c83682d2'), nom: 'Cahier', prix: 250 },
+  { _id: ObjectId('69eb3bf01c4b5584c83682d3'), nom: 'Livre', prix: 500 }
+]
+info> db.produits.insertMany([
+|   {nom: "Cahier", prix: 250},
+|   {nom: "Livre", prix: 500},
+|   {nom: "Crayon", prix: 50}
+| ])
+{
+  acknowledged: true,
+  insertedIds: {
+    '0': ObjectId('69eb3c9c1c4b5584c83682d5'),
+    '1': ObjectId('69eb3c9c1c4b5584c83682d6'),
+    '2': ObjectId('69eb3c9c1c4b5584c83682d7')
+  }
+}
+info> db.produits.find().sort({prix: 1})
+[
+  { _id: ObjectId('69eb3c9c1c4b5584c83682d7'), nom: 'Crayon', prix: 50 },
+  { _id: ObjectId('69eb3b5d1c4b5584c83682d1'), nom: 'Stylo', prix: 120 },
+  { _id: ObjectId('69eb3bf01c4b5584c83682d2'), nom: 'Cahier', prix: 250 },
+  { _id: ObjectId('69eb3c9c1c4b5584c83682d5'), nom: 'Cahier', prix: 250 },
+  { _id: ObjectId('69eb3bf01c4b5584c83682d3'), nom: 'Livre', prix: 500 },
+  { _id: ObjectId('69eb3c9c1c4b5584c83682d6'), nom: 'Livre', prix: 500 }
+]
+info> db.produits.countDocuments()
+6
+info>

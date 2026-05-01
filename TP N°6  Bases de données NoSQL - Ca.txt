@@ -1,0 +1,128 @@
+TP N°6 : Bases de données NoSQL - Cassandra
+Étudiante : [Votre Nom]
+Date : 25/04/2026
+Environnement : Docker Desktop, Cassandra 5.0.8, WSL2, Windows 11 (Lenovo ThinkPad T14)
+
+I. Objectif du TP
+Mettre en place une base de données NoSQL (Cassandra) pour gérer des restaurants et leurs inspections, comprendre les différences avec le SQL relationnel, et exécuter des requêtes CQL.
+
+II. Installation et Configuration
+1. Vérification de la virtualisation
+Avant d'installer Docker, la virtualisation a été activée dans le BIOS (F1 → Config → CPU → Intel Virtualization Technology → Enabled).
+
+2. Installation de WSL2 (Windows Subsystem for Linux)
+bash
+wsl --install
+wsl --set-default-version 2
+3. Lancement du conteneur Cassandra
+bash
+docker run --name mon-cassandra -p 9042:9042 -d cassandra:latest
+Statut final : Le conteneur mon-cassandra fonctionne et écoute sur le port 9042.
+
+III. Création de la Base de Données (Keyspace) et des Tables
+Connexion à Cassandra :
+
+bash
+docker exec -it mon-cassandra cqlsh
+sql
+-- 1. Création du keyspace (base de données)
+CREATE KEYSPACE IF NOT EXISTS resto_NY 
+WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor': 1};
+
+-- 2. Utilisation du keyspace
+USE resto_NY;
+
+-- 3. Création de la table Restaurant
+CREATE TABLE Restaurant (
+    id INT PRIMARY KEY,
+    Name VARCHAR,
+    borough VARCHAR,
+    BuildingNum VARCHAR,
+    Street VARCHAR,
+    ZipCode INT,
+    Phone text,
+    CuisineType VARCHAR
+);
+
+-- Index sur le type de cuisine
+CREATE INDEX fk_Restaurant_cuisine ON Restaurant (CuisineType);
+
+-- 4. Création de la table Inspection
+CREATE TABLE Inspection (
+    idRestaurant INT,
+    InspectionDate date,
+    ViolationCode VARCHAR,
+    ViolationDescription VARCHAR,
+    CriticalFlag VARCHAR,
+    Score INT,
+    GRADE VARCHAR,
+    PRIMARY KEY (idRestaurant, InspectionDate)
+);
+
+-- Index sur la note (grade)
+CREATE INDEX fk_Inspection_Restaurant ON Inspection (GRADE);
+Vérification :
+
+sql
+DESC Restaurant;
+DESC Inspection;
+IV. Importation des Données (CSV)
+1. Copie des fichiers CSV dans le conteneur Docker
+bash
+docker cp "D:\Users\LAPTA\Downloads\Telegram Desktop\restaurants\restaurants.csv" mon-cassandra:/
+docker cp "D:\Users\LAPTA\Downloads\Telegram Desktop\restaurants\restaurants_inspections.csv" mon-cassandra:/
+2. Exécution des commandes d'importation dans cqlsh
+sql
+USE resto_NY;
+
+COPY Restaurant (id, name, borough, buildingnum, street, zipcode, phone, cuisinetype) 
+FROM '/restaurants.csv' WITH DELIMITER=',';
+
+COPY Inspection (idrestaurant, inspectiondate, violationcode, violationdescription, criticalflag, score, grade) 
+FROM '/restaurants_inspections.csv' WITH DELIMITER=',';
+3. Résultats de l'import
+Restaurants : 25 624 lignes importées ✅
+
+Inspections : 149 818 lignes importées ✅
+
+V. Requêtes CQL et Réponses
+N°	Requête CQL	Résultat / Remarque
+1	SELECT * FROM Restaurant;	Liste complète des restaurants ✅
+2	SELECT name FROM Restaurant;	Uniquement les noms ✅
+3	SELECT name, borough FROM Restaurant WHERE id = 41569764;	Une seule ligne retournée ✅
+4	SELECT inspectiondate, grade FROM Inspection WHERE idrestaurant = 41569764;	Toutes les inspections de ce restaurant ✅
+5	SELECT name FROM Restaurant WHERE cuisinetype = 'French';	Restaurants français ✅
+6	SELECT name FROM Restaurant WHERE borough = 'BROOKLYN' ALLOW FILTERING;	Requête acceptée après ajout de ALLOW FILTERING, car borough n’est pas une clé primaire.
+7	SELECT grade, score FROM Inspection WHERE idrestaurant = 41569764 AND score >= 10 ALLOW FILTERING;	Idem, nécessite ALLOW FILTERING (filtrage sur un champ non indexé).
+8	SELECT grade FROM Inspection WHERE score > 30 ALLOW FILTERING;	✅ La condition IS NOT NULL n’est pas supportée en CQL et a été omise.
+VI. Difficultés rencontrées et solutions
+Problème	Solution
+Virtualisation désactivée	Activation dans le BIOS (Lenovo ThinkPad T14 : F1 → Config → CPU)
+Espace disque insuffisant (C: = 89 Mo libre)	Nettoyage : docker system prune -a -f, vidage de la corbeille, suppression des fichiers temporaires (3.77 Go libérés)
+Docker ne démarre pas	Redémarrage du PC et arrêt forcé des processus Docker dans le Task Manager
+Erreur ALLOW FILTERING	Cassandra bloque le filtrage sur des colonnes non indexées pour des raisons de performance. Solution : ajouter ALLOW FILTERING (compris que cette méthode est à éviter sur de très gros volumes).
+IS NOT NULL non supporté	En CQL, cette condition n’existe pas. On filtre uniquement sur les valeurs présentes.
+VII. Conclusion
+Ce TP a permis de :
+
+Comprendre l’installation de Cassandra sur Windows via Docker.
+
+Manipuler les concepts clés de Cassandra : Keyspace, Tables, Index.
+
+Importer des données réelles (plus de 170 000 lignes).
+
+Identifier les principales différences entre CQL et SQL :
+
+Nécessité d’utiliser ALLOW FILTERING pour les colonnes non clés.
+
+Absence de IS NOT NULL et de jointures complexes.
+
+Prendre conscience que les contraintes de CQL sont liées au passage à l’échelle (Big Data).
+
+VIII. Commandes utiles pour l’avenir
+Commande	Rôle
+docker ps	Lister les conteneurs actifs
+docker start mon-cassandra	Démarrer le conteneur
+docker exec -it mon-cassandra cqlsh	Ouvrir cqlsh
+docker stop mon-cassandra	Arrêter le conteneur
+docker rm mon-cassandra	Supprimer le conteneur 

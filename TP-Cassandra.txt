@@ -1,0 +1,94 @@
+# 1. التحقق من WSL والتثبيت
+wsl --install
+wsl --set-default-version 2
+wsl --unregister Ubuntu
+wsl --install -d Ubuntu
+
+# 2. أوامر Docker الأساسية
+docker run --name mon-cassandra -p 9042:9042 -d cassandra:latest
+docker ps
+docker start mon-cassandra
+docker stop mon-cassandra
+docker rm mon-cassandra
+docker rm -f mon-cassandra
+
+# 3. الدخول إلى cqlsh
+docker exec -it mon-cassandra cqlsh
+
+# 4. نسخ الملفات إلى Docker
+docker cp "D:\Users\LAPTA\Downloads\Telegram Desktop\restaurants\restaurants.csv" mon-cassandra:/
+docker cp "D:\Users\LAPTA\Downloads\Telegram Desktop\restaurants\restaurants_inspections.csv" mon-cassandra:/
+
+# 5. التحقق من الملفات داخل Docker
+docker exec mon-cassandra ls -la /*.csv
+
+# 6. أوامر المساحة والتنظيف
+Get-PSDrive C
+docker system prune -a -f
+
+# 7. البحث عن ملفات CSV
+Get-ChildItem C:\ -Filter *.csv -Recurse -ErrorAction SilentlyContinue
+dir "D:\Users\LAPTA\Downloads\Telegram Desktop\restaurants\*.csv"
+
+
+
+-- إنشاء قاعدة البيانات
+CREATE KEYSPACE IF NOT EXISTS resto_NY 
+WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor': 1};
+
+USE resto_NY;
+
+-- إنشاء الجداول
+CREATE TABLE Restaurant (
+    id INT PRIMARY KEY,
+    Name VARCHAR,
+    borough VARCHAR,
+    BuildingNum VARCHAR,
+    Street VARCHAR,
+    ZipCode INT,
+    Phone text,
+    CuisineType VARCHAR
+);
+
+CREATE INDEX fk_Restaurant_cuisine ON Restaurant (CuisineType);
+
+CREATE TABLE Inspection (
+    idRestaurant INT,
+    InspectionDate date,
+    ViolationCode VARCHAR,
+    ViolationDescription VARCHAR,
+    CriticalFlag VARCHAR,
+    Score INT,
+    GRADE VARCHAR,
+    PRIMARY KEY (idRestaurant, InspectionDate)
+);
+
+CREATE INDEX fk_Inspection_Restaurant ON Inspection (GRADE);
+
+-- التحقق
+DESC Restaurant;
+DESC Inspection;
+
+-- استيراد البيانات
+COPY Restaurant (id, name, borough, buildingnum, street, zipcode, phone, cuisinetype) 
+FROM '/restaurants.csv' WITH DELIMITER=',';
+
+COPY Inspection (idrestaurant, inspectiondate, violationcode, violationdescription, criticalflag, score, grade) 
+FROM '/restaurants_inspections.csv' WITH DELIMITER=',';
+
+-- التحقق من الاستيراد
+SELECT COUNT(*) FROM Restaurant;
+SELECT COUNT(*) FROM Inspection;
+
+-- الاستعلامات المطلوبة
+SELECT * FROM Restaurant;
+SELECT name FROM Restaurant;
+SELECT name, borough FROM Restaurant WHERE id = 41569764;
+SELECT inspectiondate, grade FROM Inspection WHERE idrestaurant = 41569764;
+SELECT name FROM Restaurant WHERE cuisinetype = 'French';
+SELECT name FROM Restaurant WHERE borough = 'BROOKLYN' ALLOW FILTERING;
+SELECT grade, score FROM Inspection WHERE idrestaurant = 41569764 AND score >= 10 ALLOW FILTERING;
+SELECT grade FROM Inspection WHERE score > 30 ALLOW FILTERING;
+
+-- الخروج
+EXIT
